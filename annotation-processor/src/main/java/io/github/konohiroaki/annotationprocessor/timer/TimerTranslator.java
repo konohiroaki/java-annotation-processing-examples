@@ -19,11 +19,13 @@ import java.util.stream.IntStream;
 import static com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import static com.sun.tools.javac.tree.JCTree.JCBlock;
 import static com.sun.tools.javac.tree.JCTree.JCExpression;
+import static com.sun.tools.javac.tree.JCTree.JCLiteral;
 import static com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import static com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
 import static com.sun.tools.javac.tree.JCTree.JCModifiers;
 import static com.sun.tools.javac.tree.JCTree.JCStatement;
 import static com.sun.tools.javac.tree.JCTree.JCVariableDecl;
+import static com.sun.tools.javac.tree.JCTree.Tag;
 
 public class TimerTranslator extends TreeTranslator {
 
@@ -63,19 +65,20 @@ public class TimerTranslator extends TreeTranslator {
     }
 
     private JCBlock createBody(JCBlock oldBody, List args) {
-        ListBuffer<JCTree.JCStatement> list = new ListBuffer<>();
         int start = (int) ((Attribute.Constant) args.get(0)).value,
             end = (int) ((Attribute.Constant) args.get(1)).value;
 
+        ListBuffer<JCTree.JCStatement> list = new ListBuffer<>();
         IntStream.range(0, oldBody.stats.size()).forEach(idx -> {
             if (idx == start) {
                 list.add(println("Timer Starting..."));
                 list.add(startTimer());
-            } else if (idx == end) {
-                list.add(stopTimer());
-                list.add(showDuration());
             }
             list.add(oldBody.stats.get(idx));
+            if (idx == end) {
+                list.add(stopTimer());
+                list.add(showDuration(new int[]{start, end}));
+            }
         });
 
         return maker.Block(0 /* com.sun.tools.javac.code.Flags */, list.toList());
@@ -97,13 +100,20 @@ public class TimerTranslator extends TreeTranslator {
         return maker.Exec(stopTimer);
     }
 
-    private JCStatement showDuration() {
+    private JCStatement showDuration(int[] step) {
         Symbol symbol = findMember(StopWatch.class, "getTime");
         JCExpression method = maker.Select(maker.Ident(elements.getName(TIMER)), symbol);
         List<JCExpression> args = List.of(maker.QualIdent(findMember(TimeUnit.class, "MILLISECONDS")));
         JCMethodInvocation duration = maker.App(method, args);
 
-        return println(duration);
+        return println(prettifyDuration(duration, step));
+    }
+
+    private JCExpression prettifyDuration(JCExpression duration, int[] step) {
+        JCLiteral leading = maker.Literal("Duration from step [" + step[0] + "] to [" + step[1] + "] was ");
+        JCLiteral trailing = maker.Literal("ms.");
+
+        return maker.Binary(Tag.PLUS, maker.Binary(Tag.PLUS, leading, duration), trailing);
     }
 
     private JCStatement println(JCExpression exp) {

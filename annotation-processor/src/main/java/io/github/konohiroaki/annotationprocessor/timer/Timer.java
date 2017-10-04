@@ -9,9 +9,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 public @interface Timer {
 
-    // Index of Start and End for measurement.
+    // Statement index of Start and End for measurement.
     int[] value() default {
         /* inclusive */ 0,
-        /* exclusive */ Integer.MAX_VALUE
+        /* inclusive */ Integer.MAX_VALUE
     };
 }

@@ -4,7 +4,7 @@ import io.github.konohiroaki.annotationprocessor.timer.Timer;
 
 public class Main {
 
-    @Timer({3, 7})
+    @Timer({3, 6})
     public static void main(String[] args) throws InterruptedException {
         System.out.println("Hello0");
         Thread.sleep(300);
